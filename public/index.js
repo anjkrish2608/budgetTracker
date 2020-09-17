@@ -1,7 +1,8 @@
 let transactions = [];
 let myChart;
 const request = window.indexedDB.open("budget", 1);
-var storedValues ;
+var storedValues;
+
 //create schema
 request.onupgradeneeded = (event) => {
   const db = event.target.result;
@@ -10,7 +11,6 @@ request.onupgradeneeded = (event) => {
   // create status index we can query on
   BudgetStore.createIndex("statusIndex", "status");
 }
-
 
 fetch("/api/transaction")
   .then(response => {
@@ -153,44 +153,35 @@ function sendTransaction(isAdding) {
     });
 }
 
-document.querySelector("#add-btn").onclick = function () {
-  sendTransaction(true);
-};
-
-document.querySelector("#sub-btn").onclick = function () {
-  sendTransaction(false);
-};
-
-
-function addData(name,value,boolean){
+function addData(name, value, boolean) {
   // open transaction accesses budget objectStore and status index
   request.onsuccess = () => {
-  console.log(request.result);
-  const db = request.result;
-  const transaction = db.transaction(["budget"], "readwrite");
-  const BudgetStore = transaction.objectStore("budget");
-  var counter=1;
-  BudgetStore.add({listID:counter,status:{name:name,value:value,isAdding:boolean}});
-  counter++;
-}
-}
-
-function accessData(){
-   // open transaction accesses budget objectStore and status index
-   request.onsuccess = () => {
     console.log(request.result);
     const db = request.result;
     const transaction = db.transaction(["budget"], "readwrite");
     const BudgetStore = transaction.objectStore("budget");
-    const statusIndex=BudgetStore.index("statusIndex");
-    const getRequestAll =statusIndex.getAll();
-    getRequestAll.onsuccess=()=>{
-      storedValues=getRequestAll.result;
+    var counter = 1;
+    BudgetStore.add({ listID: counter, status: { name: name, value: value, isAdding: boolean } });
+    counter++;
+  }
+}
+
+function accessData() {
+  // open transaction accesses budget objectStore and status index
+  request.onsuccess = () => {
+    console.log(request.result);
+    const db = request.result;
+    const transaction = db.transaction(["budget"], "readwrite");
+    const BudgetStore = transaction.objectStore("budget");
+    const statusIndex = BudgetStore.index("statusIndex");
+    const getRequestAll = statusIndex.getAll();
+    getRequestAll.onsuccess = () => {
+      storedValues = getRequestAll.result;
     }
   }
 }
 
-function deleteData(){
+function deleteData() {
   request.onsuccess = () => {
     console.log(request.result);
     const db = request.result;
@@ -200,6 +191,15 @@ function deleteData(){
     console.log("deleted indexed data");
   }
 }
+
+function isWindowOffline() {
+  window.addEventListener('offline', function (e) {
+
+    console.log('Connection is down.');
+  }, false);
+  return true;
+}
+
 window.addEventListener('online', function (e) {
   console.log('And we\'re back :).');
   accessData();
@@ -225,52 +225,60 @@ window.addEventListener('online', function (e) {
     populateTable();
     populateTotal();
     // also send to server
-  fetch("/api/transaction", {
-    method: "POST",
-    body: JSON.stringify(transaction),
-    headers: {
-      Accept: "application/json, text/plain, */*",
-      "Content-Type": "application/json"
-    }
-  })
-    .then(response => {
-      return response.json();
-    })
-    .then(data => {
-      if (data.errors) {
-        errorEl.textContent = "Missing Information";
+    fetch("/api/transaction", {
+      method: "POST",
+      body: JSON.stringify(transaction),
+      headers: {
+        Accept: "application/json, text/plain, */*",
+        "Content-Type": "application/json"
       }
-      else {
+    })
+      .then(response => {
+        return response.json();
+      })
+      .then(data => {
+        if (data.errors) {
+          errorEl.textContent = "Missing Information";
+        }
+        else {
+          // clear form
+          nameEl.value = "";
+          amountEl.value = "";
+        }
+      })
+      .catch(err => {
+        // fetch failed, so save in indexed db
+        saveRecord(transaction);
+
         // clear form
         nameEl.value = "";
         amountEl.value = "";
-      }
-    })
-    .catch(err => {
-      // fetch failed, so save in indexed db
-      saveRecord(transaction);
-
-      // clear form
-      nameEl.value = "";
-      amountEl.value = "";
-    });
+      });
   });
 
   deleteData();
 }, false);
 
-window.addEventListener('offline', function (e) {
-  console.log('Connection is down.');
-  var name=$("#t-name").textContent;
-  var value=$("t-amount").value;
-  //when add button clicked
-  document.querySelector("#add-btn").onclick = function () {
-    var boolean=true;
-    addData(name,value,boolean)
-  };
-  //when subtract button is clicked
-  document.querySelector("#sub-btn").onclick = function () {
-    var boolean=false;
-    addData(name,value,boolean)
-  };
-}, false);
+
+document.querySelector("#add-btn").onclick = function () {
+  console.log("here")
+  var name = $("#t-name").textContent;
+  var value = $("t-amount").value;
+  if (isWindowOffline()) {
+    var boolean = true;
+    addData(name, value, boolean)
+  } else {
+    sendTransaction(true);
+  }
+};
+
+document.querySelector("#sub-btn").onclick = function () {
+  var name = $("#t-name").textContent;
+  var value = $("t-amount").value;
+  if (isWindowOffline()) {
+    var boolean = false;
+    addData(name, value, boolean)
+  } else {
+    sendTransaction(false);
+  }
+};
