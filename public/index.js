@@ -11,6 +11,15 @@ request.onupgradeneeded=(event)=>{
   BudgetStore.createIndex("statusIndex","status");
 }
 
+// open transaction accesses budget objectStore and status index
+request.onsuccess=()=>{
+  console.log(request.result);
+  const db=request.result;
+  const transaction=db.transaction(["budget"],"readwrite");
+  const BudgetStore=transaction.objectStore("budget");
+
+}
+
 fetch("/api/transaction")
   .then(response => {
     return response.json();
