@@ -1,5 +1,15 @@
 let transactions = [];
 let myChart;
+const request =window.indexedDB.open("budget",1);
+
+//create schema
+request.onupgradeneeded=(event)=>{
+  const db =event.target.result;
+  //create object store w/ listID keypath that can be queried on
+  const BudgetStore=db.createObjectStore("budget",{keyPath:"id"});
+  // create status index we can query on
+  BudgetStore.createIndex("statusIndex","status");
+}
 
 fetch("/api/transaction")
   .then(response => {

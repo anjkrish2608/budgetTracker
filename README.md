@@ -1,6 +1,6 @@
 # Budget Tracker
 
-[Click here to view the application on heroku.](https://aqueous-garden-11852.herokuapp.com/)
+[Click here to view the application on heroku.](https://budget-tracker-a2608.herokuapp.com/)
 
 [Click here to view repository.](https://github.com/anjkrish2608/budgetTracker)
 
