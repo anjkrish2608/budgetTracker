@@ -1,24 +1,16 @@
 let transactions = [];
 let myChart;
-const request =window.indexedDB.open("budget",1);
-
+const request = window.indexedDB.open("budget", 1);
+var storedValues ;
 //create schema
-request.onupgradeneeded=(event)=>{
-  const db =event.target.result;
+request.onupgradeneeded = (event) => {
+  const db = event.target.result;
   //create object store w/ listID keypath that can be queried on
-  const BudgetStore=db.createObjectStore("budget",{keyPath:"id"});
+  const BudgetStore = db.createObjectStore("budget", { keyPath: "id" });
   // create status index we can query on
-  BudgetStore.createIndex("statusIndex","status");
+  BudgetStore.createIndex("statusIndex", "status");
 }
 
-// open transaction accesses budget objectStore and status index
-request.onsuccess=()=>{
-  console.log(request.result);
-  const db=request.result;
-  const transaction=db.transaction(["budget"],"readwrite");
-  const BudgetStore=transaction.objectStore("budget");
-
-}
 
 fetch("/api/transaction")
   .then(response => {
@@ -85,14 +77,14 @@ function populateChart() {
 
   myChart = new Chart(ctx, {
     type: 'line',
-      data: {
-        labels,
-        datasets: [{
-            label: "Total Over Time",
-            fill: true,
-            backgroundColor: "#6666ff",
-            data
-        }]
+    data: {
+      labels,
+      datasets: [{
+        label: "Total Over Time",
+        fill: true,
+        backgroundColor: "#6666ff",
+        data
+      }]
     }
   });
 }
@@ -122,7 +114,6 @@ function sendTransaction(isAdding) {
   if (!isAdding) {
     transaction.value *= -1;
   }
-
   // add to beginning of current array of data
   transactions.unshift(transaction);
 
@@ -130,7 +121,6 @@ function sendTransaction(isAdding) {
   populateChart();
   populateTable();
   populateTotal();
-  
   // also send to server
   fetch("/api/transaction", {
     method: "POST",
@@ -140,33 +130,147 @@ function sendTransaction(isAdding) {
       "Content-Type": "application/json"
     }
   })
-  .then(response => {    
-    return response.json();
-  })
-  .then(data => {
-    if (data.errors) {
-      errorEl.textContent = "Missing Information";
-    }
-    else {
+    .then(response => {
+      return response.json();
+    })
+    .then(data => {
+      if (data.errors) {
+        errorEl.textContent = "Missing Information";
+      }
+      else {
+        // clear form
+        nameEl.value = "";
+        amountEl.value = "";
+      }
+    })
+    .catch(err => {
+      // fetch failed, so save in indexed db
+      saveRecord(transaction);
+
       // clear form
       nameEl.value = "";
       amountEl.value = "";
-    }
-  })
-  .catch(err => {
-    // fetch failed, so save in indexed db
-    saveRecord(transaction);
-
-    // clear form
-    nameEl.value = "";
-    amountEl.value = "";
-  });
+    });
 }
 
-document.querySelector("#add-btn").onclick = function() {
+document.querySelector("#add-btn").onclick = function () {
   sendTransaction(true);
 };
 
-document.querySelector("#sub-btn").onclick = function() {
+document.querySelector("#sub-btn").onclick = function () {
   sendTransaction(false);
 };
+
+
+function addData(name,value,boolean){
+  // open transaction accesses budget objectStore and status index
+  request.onsuccess = () => {
+  console.log(request.result);
+  const db = request.result;
+  const transaction = db.transaction(["budget"], "readwrite");
+  const BudgetStore = transaction.objectStore("budget");
+  var counter=1;
+  BudgetStore.add({listID:counter,status:{name:name,value:value,isAdding:boolean}});
+  counter++;
+}
+}
+
+function accessData(){
+   // open transaction accesses budget objectStore and status index
+   request.onsuccess = () => {
+    console.log(request.result);
+    const db = request.result;
+    const transaction = db.transaction(["budget"], "readwrite");
+    const BudgetStore = transaction.objectStore("budget");
+    const statusIndex=BudgetStore.index("statusIndex");
+    const getRequestAll =statusIndex.getAll();
+    getRequestAll.onsuccess=()=>{
+      storedValues=getRequestAll.result;
+    }
+  }
+}
+
+function deleteData(){
+  request.onsuccess = () => {
+    console.log(request.result);
+    const db = request.result;
+    const transaction = db.transaction(["budget"], "readwrite");
+    const BudgetStore = transaction.objectStore("budget");
+    BudgetStore.delete();
+    console.log("deleted indexed data");
+  }
+}
+window.addEventListener('online', function (e) {
+  console.log('And we\'re back :).');
+  accessData();
+  console.log(storedValues);
+  storedValues.forEach(entry => {
+    // create record
+    let transaction = {
+      name: nameEl.value,
+      value: amountEl.value,
+      date: new Date().toISOString()
+    };
+
+    // if subtracting funds, convert amount to negative number
+    if (!isAdding) {
+      transaction.value *= -1;
+    }
+
+    // add to beginning of current array of data
+    transactions.unshift(transaction);
+
+    // re-run logic to populate ui with new record
+    populateChart();
+    populateTable();
+    populateTotal();
+    // also send to server
+  fetch("/api/transaction", {
+    method: "POST",
+    body: JSON.stringify(transaction),
+    headers: {
+      Accept: "application/json, text/plain, */*",
+      "Content-Type": "application/json"
+    }
+  })
+    .then(response => {
+      return response.json();
+    })
+    .then(data => {
+      if (data.errors) {
+        errorEl.textContent = "Missing Information";
+      }
+      else {
+        // clear form
+        nameEl.value = "";
+        amountEl.value = "";
+      }
+    })
+    .catch(err => {
+      // fetch failed, so save in indexed db
+      saveRecord(transaction);
+
+      // clear form
+      nameEl.value = "";
+      amountEl.value = "";
+    });
+  });
+
+  deleteData();
+}, false);
+
+window.addEventListener('offline', function (e) {
+  console.log('Connection is down.');
+  var name=$("#t-name").textContent;
+  var value=$("t-amount").value;
+  //when add button clicked
+  document.querySelector("#add-btn").onclick = function () {
+    var boolean=true;
+    addData(name,value,boolean)
+  };
+  //when subtract button is clicked
+  document.querySelector("#sub-btn").onclick = function () {
+    var boolean=false;
+    addData(name,value,boolean)
+  };
+}, false);

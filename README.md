@@ -34,7 +34,16 @@ While creating this application I have used many different technologies listed b
 <a id="chall"></a>
 
 ## Challenges Faced
-Throughout the creation of this application I have faced many challenges. The main challenge I faced was due to initially focusing on using the inquirer recursive prompt package. However this would not function correctly on my computer resulting in relying on the multiple functions to correctly order the prompts and loop through them.
+[here](https://www.studytonight.com/post/check-if-user-is-offline-online-in-javascript#:~:text=To%20check%20if%20the%20user%20is%20online%20or%20offline%20when,onLine)%20%7B%20console.)
+```
+window.addEventListener('online', function(e) {
+    console.log('And we\'re back :).');
+}, false);
+            
+window.addEventListener('offline', function(e) {
+    console.log('Connection is down.');
+}, false);
+```
 
 <a id="dev"></a>
 
