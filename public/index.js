@@ -1,15 +1,24 @@
 let transactions = [];
+let transaction;
 let myChart;
 const request = window.indexedDB.open("budget", 1);
-var storedValues;
-
+var offline;
+let db;
+let pendingStore;
+let nameE1;
+let amountEl;
 //create schema
 request.onupgradeneeded = (event) => {
   const db = event.target.result;
   //create object store w/ listID keypath that can be queried on
-  const BudgetStore = db.createObjectStore("budget", { keyPath: "id" });
+  pendingStore = db.createObjectStore("pending", { autoIncrement: true });
   // create status index we can query on
-  BudgetStore.createIndex("statusIndex", "status");
+  pendingStore.createIndex("statusIndex", "status");
+}
+
+request.onsuccess = (event) => {
+  db = event.target.result;
+
 }
 
 fetch("/api/transaction")
@@ -89,10 +98,20 @@ function populateChart() {
   });
 }
 
-function sendTransaction(isAdding) {
-  let nameEl = document.querySelector("#t-name");
-  let amountEl = document.querySelector("#t-amount");
-  let errorEl = document.querySelector(".form .error");
+function isWindowOffline() {
+  window.addEventListener('offline', function (e) {
+
+    console.log('Connection is down.');
+    offline = true;
+
+    console.log("offline: " + offline);
+  }, false);
+}
+
+function sendTransaction(isAdding, offline) {
+  nameEl = document.querySelector("#t-name");
+  amountEl = document.querySelector("#t-amount");
+  errorEl = document.querySelector(".form .error");
 
   // validate form
   if (nameEl.value === "" || amountEl.value === "") {
@@ -104,7 +123,7 @@ function sendTransaction(isAdding) {
   }
 
   // create record
-  let transaction = {
+  transaction = {
     name: nameEl.value,
     value: amountEl.value,
     date: new Date().toISOString()
@@ -121,109 +140,10 @@ function sendTransaction(isAdding) {
   populateChart();
   populateTable();
   populateTotal();
-  // also send to server
-  fetch("/api/transaction", {
-    method: "POST",
-    body: JSON.stringify(transaction),
-    headers: {
-      Accept: "application/json, text/plain, */*",
-      "Content-Type": "application/json"
-    }
-  })
-    .then(response => {
-      return response.json();
-    })
-    .then(data => {
-      if (data.errors) {
-        errorEl.textContent = "Missing Information";
-      }
-      else {
-        // clear form
-        nameEl.value = "";
-        amountEl.value = "";
-      }
-    })
-    .catch(err => {
-      // fetch failed, so save in indexed db
-      saveRecord(transaction);
 
-      // clear form
-      nameEl.value = "";
-      amountEl.value = "";
-    });
-}
-
-function addData(name, value, boolean) {
-  // open transaction accesses budget objectStore and status index
-  request.onsuccess = () => {
-    console.log(request.result);
-    const db = request.result;
-    const transaction = db.transaction(["budget"], "readwrite");
-    const BudgetStore = transaction.objectStore("budget");
-    var counter = 1;
-    BudgetStore.add({ listID: counter, status: { name: name, value: value, isAdding: boolean } });
-    counter++;
-  }
-}
-
-function accessData() {
-  // open transaction accesses budget objectStore and status index
-  request.onsuccess = () => {
-    console.log(request.result);
-    const db = request.result;
-    const transaction = db.transaction(["budget"], "readwrite");
-    const BudgetStore = transaction.objectStore("budget");
-    const statusIndex = BudgetStore.index("statusIndex");
-    const getRequestAll = statusIndex.getAll();
-    getRequestAll.onsuccess = () => {
-      storedValues = getRequestAll.result;
-    }
-  }
-}
-
-function deleteData() {
-  request.onsuccess = () => {
-    console.log(request.result);
-    const db = request.result;
-    const transaction = db.transaction(["budget"], "readwrite");
-    const BudgetStore = transaction.objectStore("budget");
-    BudgetStore.delete();
-    console.log("deleted indexed data");
-  }
-}
-
-function isWindowOffline() {
-  window.addEventListener('offline', function (e) {
-
-    console.log('Connection is down.');
-  }, false);
-  return true;
-}
-
-window.addEventListener('online', function (e) {
-  console.log('And we\'re back :).');
-  accessData();
-  console.log(storedValues);
-  storedValues.forEach(entry => {
-    // create record
-    let transaction = {
-      name: nameEl.value,
-      value: amountEl.value,
-      date: new Date().toISOString()
-    };
-
-    // if subtracting funds, convert amount to negative number
-    if (!isAdding) {
-      transaction.value *= -1;
-    }
-
-    // add to beginning of current array of data
-    transactions.unshift(transaction);
-
-    // re-run logic to populate ui with new record
-    populateChart();
-    populateTable();
-    populateTotal();
+  isWindowOffline();
+  console.log("offline: " + offline);
+  if (offline === false) {
     // also send to server
     fetch("/api/transaction", {
       method: "POST",
@@ -254,31 +174,96 @@ window.addEventListener('online', function (e) {
         nameEl.value = "";
         amountEl.value = "";
       });
-  });
+  }
+}
 
-  deleteData();
+function saveRecord(X) {
+  // open transaction accesses budget objectStore and status index
+
+  console.log("save record function");
+  const trans = db.transaction(["pending"], "readwrite");
+  const pendingStore = trans.objectStore("pending");
+  pendingStore.add(X);
+
+}
+
+function accessData() {
+  // open transaction accesses budget objectStore and status index
+
+  const trans = db.transaction(["pending"], "readwrite");
+  const pendingStore = trans.objectStore("pending");
+  const getRequestAll = pendingStore.getAll();
+  getRequestAll.onsuccess = () => {
+    const storedValues = getRequestAll.result;
+    if (storedValues.length > 0) {
+      // send to server
+      fetch("/api/transaction", {
+        method: "POST",
+        body: JSON.stringify(storedValues),
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/json"
+        }
+      })
+        .then(response => {
+          return response.json();
+        })
+        .then(data => {
+          if (data.errors) {
+            errorEl.textContent = "Missing Information";
+          }
+          else {
+            // clear form
+            nameEl.value = "";
+            amountEl.value = "";
+          }
+        })
+        .catch(err => {
+          // fetch failed, so save in indexed db
+          saveRecord(transaction);
+
+          // clear form
+          nameEl.value = "";
+          amountEl.value = "";
+        });
+    }
+    deleteData();
+  }
+
+}
+
+function deleteData() {
+    console.log("delete function");
+    const transactionDB = db.transaction(["pending"], "readwrite");
+    const pendingStore = transactionDB.objectStore("pending");
+    pendingStore.clear();
+    console.log("deleted indexed data");
+ 
+}
+
+
+window.addEventListener('online', function (e) {
+  console.log('And we\'re back :).');
+  offline = false;
+  console.log("offline: " + offline);
+  accessData();
 }, false);
 
 
 document.querySelector("#add-btn").onclick = function () {
-  console.log("here")
-  var name = $("#t-name").textContent;
-  var value = $("t-amount").value;
-  if (isWindowOffline()) {
-    var boolean = true;
-    addData(name, value, boolean)
-  } else {
-    sendTransaction(true);
+  console.log("add button")
+  isWindowOffline();
+  sendTransaction(true, offline);
+  if (offline == true) {
+    saveRecord(transaction);
   }
 };
 
 document.querySelector("#sub-btn").onclick = function () {
-  var name = $("#t-name").textContent;
-  var value = $("t-amount").value;
-  if (isWindowOffline()) {
-    var boolean = false;
-    addData(name, value, boolean)
-  } else {
-    sendTransaction(false);
+  console.log("sub button")
+  isWindowOffline();
+  sendTransaction(false, offline);
+  if (offline == true) {
+    saveRecord(transaction);
   }
 };
