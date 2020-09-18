@@ -1,6 +1,6 @@
 # Budget Tracker
 
-[Click here to view the application on heroku.](https://budget-tracker-a2608.herokuapp.com/)
+[Click here to view the application on heroku.](https://budget-tracker-anjkrish2608.herokuapp.com/)
 
 [Click here to view repository.](https://github.com/anjkrish2608/budgetTracker)
 
@@ -19,22 +19,22 @@
 <a id="des"></a>
 
 ## Description of Application
-The Readme Generator is a CLI application which prompts the user for information which is then outputted in the form of a team website. The motivation behind the creation of this application is to automate the process of creating a team website with profiles for each employee. An example output of this application is attached to the repository. Throughout the creation of this application I have learned how to use functions to create an ordered prompt sequence.
+The Budget Tracker is an application which tracks the users spending, it allows the user to keep track of the overall total and individual entries. Furthermore the user is able to utilise these features offline and the data is still held on the database.
 
 <a id="tech"></a>
 
 ## Technologies Used
 While creating this application I have used many different technologies listed below:
 
-* JavaScript ES6 : to write all of the code inside app.js
-* Node JS : to run the app.js file
-* Inquirer Package : to ask the user for input
-* Fs Package : to write the html file
+* JavaScript ES6 : to write all of the code inside index.js
+* Node JS : to run the server.js file
+* Indexed DB : to maintain the data when the server is offline
 
 <a id="chall"></a>
 
 ## Challenges Faced
-[here](https://www.studytonight.com/post/check-if-user-is-offline-online-in-javascript#:~:text=To%20check%20if%20the%20user%20is%20online%20or%20offline%20when,onLine)%20%7B%20console.)
+I actually thoroughly enjoyed this homework. I liked the challenge of nit picking the code to see which variables scope was insufficient and the small syntax errors I made in the beginning in creating the indexed db which drove me crazy. A particular feature I found very interesting was the code used to determine whether the server was online or not I used the code from [Study Tonight](https://www.studytonight.com/post/check-if-user-is-offline-online-in-javascript#:~:text=To%20check%20if%20the%20user%20is%20online%20or%20offline%20when,onLine)%20%7B%20console.), written by iamabhishek shown below.
+
 ```
 window.addEventListener('online', function(e) {
     console.log('And we\'re back :).');
@@ -44,41 +44,35 @@ window.addEventListener('offline', function(e) {
     console.log('Connection is down.');
 }, false);
 ```
+This code does create one error which I will one day fix... the offline variable used to determine whether to complete the post request is undefined unless the server goes offline... I havent yet understood why it doesnt tell you the server is online when the application is initially opened but anyway this creates an error if the user goes offline before posting online.
+
 
 <a id="dev"></a>
 
 ## Features to be Implemented
-In the future I would like to implement the more creative CSS styling and limit the number of employees per row.
-
+In the future I would like to correct the error mentioned in the previous section and refactor the code to be more efficient.
 
 <a id="insta"></a>
 
 ## Installation Steps
-1. Download Node.js
-2. Download apps.js to a folder.
+1. Download the repository folder.
 3. Run the terminal in that folder and write the following commands:
 ```
 npm init
 npm install
-npm install inquirer
+npm start
 ```
-4. Then run the app.js file using the command
-```
-node app.js
-```
+4. Enjoy!
 
 <a id="tests"></a>
 
 ## Tests
-To test the application ensure the test folder is downloaded and run the following command in the terminal.
-```
-npm run test
-```
+There are currently no tests for this application.
 
 <a id="use"></a>
 
 ## How to Use
-After following the Installation steps you will be prompted with a series of questions, answer accordingly and inside the folder there should be a new file named \"team.html\" in the output folder which you can then upload to your application's repository.
+After following the Installation steps open [https://localhost:3000](https://localhost:3000) or click [here](https://budget-tracker-anjkrish2608.herokuapp.com/) to access the application on heroku.
 
 <a id="lic"></a>
 
@@ -111,8 +105,8 @@ SOFTWARE.
 As mentioned in [Technologies Used](#tech) the following assets were used:
 * [JavaScript ES6](https://www.javascript.com/)
 * [Node JS](https://nodejs.org/en/)
-* [Inquirer Package](https://www.npmjs.com/package/inquirer)
-* [Fs Package](https://www.npmjs.com/package/fs)
-Furthermore the requirements set for this application were supplied by Trilogy Education Services.
+* [Indexed DB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
+* [iamabhishek](https://www.studytonight.com/profile?id=1)
+Furthermore the requirements and the inital code for this application were supplied by Trilogy Education Services.
 
 © 2019 Trilogy Education Services, a 2U, Inc. brand. All Rights Reserved.
